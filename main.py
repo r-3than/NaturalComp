@@ -1,6 +1,7 @@
 import random
 import numpy as np
 import copy
+import csv
 INPUTS = 4
 
 
@@ -92,25 +93,46 @@ class Being:
             self.value = self.value/price
             self.value *=0.999
             self.buying = False
-        elif self.outVal() < 0 and not self.buying:
+        if self.outVal() < 0 and not self.buying:
             self.value = self.value*price
             self.value *=0.999
             self.buying = True
+    def printOptions(self,p):
+        if self.outVal() > 0 and self.buying: ##Buy
+            print("I have",self.value,"USD , im going to buy",self.value/p,"doge"," for",p)
+            print("SHOULD BUY")
+        if self.outVal() < 0 and not self.buying:
+            print("I have",self.value,"Doge , im going to buy",self.value*p,"usd"," for",p)
+            print("SHOULD SELL")
+
     def getScore(self,price):
         if not self.buying:
             return self.value*price
         else: return self.value
 
 
+def loadData(filename):
+    endArray = []
+    with open(filename, newline='') as csvfile:
+        spamreader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+        for _ in range(1,len(spamreader)):
+            endArray.append(spamreader[_][1])
+    endArray = endArray[::-1]
+    return endArray
 
-testData=[1,4,5,3,2,6,8,4,2,4,10,12,15,17,13,5,4,2,4,10,12,15,17,13,5,4,2,4,10,12,15,17,13,5,4,2,4,10,12,15,17,13,5,17,13,5,4,2,4,10,12,15,17,13,5,4,2,4,10,12,15,17,13,5,4,2,4,10,12,15,17,13,5]
+
+
+
+testData=[99,4,5,3,2,6,8,4,2,4,10,12,15,17,13,5,4,2,4,10,12,15,17,13,5,4,2,4,10,12,15,17,13,5,4,2,4,10,12,15,17,13,5,17,13,5,4,2,4,10,12,15,17,13,5,4,2,4,10,12,15,17,13,5,4,2,4,10,12,15,17,13,5,1,1,1,1,1]
+testData = loadData("FTSEDATA.csv")
 allInputNodes = []
 offest =3 
       
 for _ in range(3,len(testData)):
-    entryNodes = []  
-    for x in range(4):
-        entryNodes.append(InputNode(testData[_]-testData[x]))
+    entryNodes = []
+    entryNodes.append(InputNode(testData[_]))  
+    for x in range(1,4):
+        entryNodes.append(InputNode(testData[_]-testData[_-x]))
     allInputNodes.append(entryNodes)
 
 
@@ -141,12 +163,23 @@ for y in range(1,len(allInputNodes)):
             for _ in range(10):
                 allBeings.append(val[1].createOffSpring())
         print(allVal[0][0])
+        lastBeing = allVal[0][1]
         allVal = []
         for being in allBeings:
             being.value = 100
     for being in allBeings:
         being.setInp(allInputNodes[y])
-            
+input()
+print("-----------")
+lastBeing.value = 100        
+for item in allInputNodes:       
+    lastBeing.setInp(item)
+    lastBeing.printOptions(item[0].getVal())
+    lastBeing.doAction(item[0].getVal())
+
+    print(lastBeing.getScore(item[0].getVal()))
+    
+
         
 
 
