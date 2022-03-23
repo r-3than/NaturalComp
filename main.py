@@ -2,7 +2,9 @@ import random
 import numpy as np
 import copy
 import csv
-INPUTS = 4
+import pandas as pd
+
+INPUTS = 7
 
 
 class Gene:
@@ -21,9 +23,9 @@ class Gene:
             self.inputConnections.append(self.inputNodes[inputNodeIndex])
             self.inputNodes.pop(inputNodeIndex)
         self.generateMatrixAfterRun()
-    def generateMatrixAfterRun(self):
-        self.inputMatrix = self.inputMatrix + np.random.normal(loc=0,scale=1,size=self.inputMatrix.shape)
-        self.outMatrix = self.outMatrix + np.random.normal(loc=0,scale=1,size=self.outMatrix.shape)
+    def generateMatrixAfterRun(self,scm=0.1):
+        self.inputMatrix = self.inputMatrix + np.random.normal(loc=0,scale=1*scm,size=self.inputMatrix.shape)
+        self.outMatrix = self.outMatrix + np.random.normal(loc=0,scale=1*scm,size=self.outMatrix.shape)
         if random.random() > 0.90:
             add = random.random()
             if len(self.inputConnections) != 0 and add < 0.0:
@@ -71,8 +73,14 @@ class Being:
         self.value = 100.0
         self.buying = True
         self.L1Genes = []
-        for _ in range(10):
+        self.L2Genes = []
+        for _ in range(5):
             self.L1Genes.append(Gene(copy.copy(inp)))
+
+
+        for _ in range(5):
+            tempArr = copy.copy(inp) + copy.copy(self.L1Genes)
+            self.L2Genes.append(Gene(tempArr))
     def setInp(self,inp):
         for _ in range(len(inp)):
             self.inp[_].setVal(inp[_].getVal()) 
@@ -83,9 +91,11 @@ class Being:
     def calcAllGenes(self):
         for gene in self.L1Genes:
             gene.generateMatrixAfterRun()
+        for gene in self.L2Genes:
+            gene.generateMatrixAfterRun()
     def outVal(self):
         total = 0
-        for gene in self.L1Genes:
+        for gene in self.L2Genes:
             total+=gene.getVal()
         return total
     def doAction(self,price):
@@ -112,13 +122,11 @@ class Being:
 
 
 def loadData(filename):
-    endArray = []
-    with open(filename, newline='') as csvfile:
-        spamreader = csv.reader(csvfile, delimiter=' ', quotechar='|')
-        for _ in range(1,len(spamreader)):
-            endArray.append(spamreader[_][1])
-    endArray = endArray[::-1]
-    return endArray
+    df = pd.read_csv(filename)
+    print(df)
+    df = df.replace(',','', regex=True)
+    col = df.Open.astype(float)
+    return col[::-1]
 
 
 
@@ -126,12 +134,12 @@ def loadData(filename):
 testData=[99,4,5,3,2,6,8,4,2,4,10,12,15,17,13,5,4,2,4,10,12,15,17,13,5,4,2,4,10,12,15,17,13,5,4,2,4,10,12,15,17,13,5,17,13,5,4,2,4,10,12,15,17,13,5,4,2,4,10,12,15,17,13,5,4,2,4,10,12,15,17,13,5,1,1,1,1,1]
 testData = loadData("FTSEDATA.csv")
 allInputNodes = []
-offest =3 
+offset =INPUTS-1 
       
-for _ in range(3,len(testData)):
+for _ in range(offset,len(testData)):
     entryNodes = []
     entryNodes.append(InputNode(testData[_]))  
-    for x in range(1,4):
+    for x in range(1,INPUTS):
         entryNodes.append(InputNode(testData[_]-testData[_-x]))
     allInputNodes.append(entryNodes)
 
@@ -145,39 +153,45 @@ for _ in range(MAXBEINGS):
 
     print(testBeing.outVal())
 
-laps = 3
-for y in range(1,len(allInputNodes)):
-    allVal = []
-    for being in allBeings:
-        val=being.inp[0].getVal()
-        being.doAction(val)
-        if y % laps == 0:
-            allVal.append([being.getScore(val),being])
-    if y % laps ==0:
-        allVal =sorted(allVal,key=lambda x: x[0],reverse=True)
-        allVal = allVal[0:49]
-        allBeings = []
-        for val in allVal:
-            allBeings.append(val[1])
-        for val in allVal:
-            for _ in range(10):
-                allBeings.append(val[1].createOffSpring())
-        print(allVal[0][0])
-        lastBeing = allVal[0][1]
+for _ in range(5):
+    laps = INPUTS-1
+    for y in range(1,len(allInputNodes)):
         allVal = []
         for being in allBeings:
-            being.value = 100
-    for being in allBeings:
-        being.setInp(allInputNodes[y])
-input()
-print("-----------")
-lastBeing.value = 100        
-for item in allInputNodes:       
-    lastBeing.setInp(item)
-    lastBeing.printOptions(item[0].getVal())
-    lastBeing.doAction(item[0].getVal())
+            being.setInp(allInputNodes[y])
+        for being in allBeings:
+            val=being.inp[0].getVal()
+            being.doAction(val)
+            if y % laps == 0:
+                allVal.append([being.getScore(val),being])
+        if y % laps ==0:
+            allVal =sorted(allVal,key=lambda x: x[0],reverse=True)
+            allVal = allVal[0:(len(allBeings)//10)-1]
+            allBeings = []
+            for val in allVal:
+                allBeings.append(val[1])
+            while len(allBeings) < MAXBEINGS:
+                for val in allVal:
+                        allBeings.append(val[1].createOffSpring())
+            print(allVal[0][0])
+            print("AMT:"+str(len(allBeings)))
+            lastBeing = allVal[0][1]
+            allVal = []
+            for being in allBeings:
+                being.value = 100
+                being.buying = True
+        
 
-    print(lastBeing.getScore(item[0].getVal()))
+    print("-----------")
+    lastBeing.value = 100  
+    lastBeing.buying = True     
+    for item in allInputNodes:       
+        lastBeing.setInp(item)
+        lastBeing.printOptions(item[0].getVal())
+        lastBeing.doAction(item[0].getVal())
+
+        print(lastBeing.getScore(item[0].getVal()))
+    input()
     
 
         
